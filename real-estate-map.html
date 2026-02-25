@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangkok Real Estate Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Marker Cluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .sidebar h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #FF6B6B;
+            padding-bottom: 10px;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            margin-bottom: 20px;
+        }
+
+        .filter-section h3 {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+        }
+
+        .filter-option input[type="checkbox"],
+        .filter-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .filter-option label {
+            cursor: pointer;
+            font-size: 14px;
+            color: #555;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .zone-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            margin-right: 8px;
+            border: 1px solid #ddd;
+        }
+
+        /* Price Range Slider */
+        .price-range-container {
+            margin-bottom: 15px;
+        }
+
+        .price-inputs {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .price-inputs input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-reset {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-reset:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-filter {
+            background: #FF6B6B;
+            color: white;
+        }
+
+        .btn-filter:hover {
+            background: #E55555;
+        }
+
+        /* Projects List */
+        .projects-list {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .projects-list h3 {
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .project-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+            border-left: 3px solid #FF6B6B;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .project-item:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .project-item-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .project-item-zone {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Map */
+        #map {
+            flex: 1;
+            background: #e5e3df;
+        }
+
+        /* Popup */
+        .leaflet-popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .popup-content {
+            min-width: 280px;
+        }
+
+        .popup-header {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #FF6B6B;
+            padding-bottom: 8px;
+        }
+
+        .popup-info {
+            font-size: 13px;
+            color: #666;
+            margin: 6px 0;
+            line-height: 1.4;
+        }
+
+        .popup-info strong {
+            color: #333;
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .popup-links {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 8px;
+        }
+
+        .popup-links a {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background: #FF6B6B;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .popup-links a:hover {
+            background: #E55555;
+        }
+
+        /* Search */
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .search-box::placeholder {
+            color: #bbb;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 40vh;
+                border-bottom: 2px solid #ddd;
+            }
+
+            #map {
+                min-height: 60vh;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #FF6B6B;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h1>🏠 Real Estate</h1>
+
+            <!-- Search -->
+            <input type="text" id="searchBox" class="search-box" placeholder="ค้นหาโครงการ...">
+
+            <!-- Filters -->
+            <div class="filter-section">
+                <h3>โซน (Zone)</h3>
+                <div class="filter-group" id="zoneFilters"></div>
+            </div>
+
+            <div class="filter-section">
+                <h3>ประเภท (Type)</h3>
+                <div class="filter-group" id="typeFilters"></div>
+            </div>
+
+            <div class="filter-section">
+                <h3>ช่วงราคา (Price Range)</h3>
+                <div class="price-range-container">
+                    <div>ต่ำสุด (ล้าน)</div>
+                    <input type="number" id="minPrice" placeholder="0" min="0" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; margin: 5px 0;">
+                    <div>สูงสุด (ล้าน)</div>
+                    <input type="number" id="maxPrice" placeholder="1000" min="0" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; margin: 5px 0;">
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-group">
+                <button class="btn btn-filter" onclick="applyFilters()">🔍 ค้นหา</button>
+                <button class="btn btn-reset" onclick="resetFilters()">↺ รีเซ็ต</button>
+            </div>
+
+            <!-- Projects List -->
+            <div class="projects-list">
+                <h3>โครงการ (Projects)</h3>
+                <div id="projectsList"></div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // ============================================
+        // Configuration
+        // ============================================
+        
+        const SHEET_ID = '19tfX9oSvjVHIcDoeVxsbEIRlP_kOWLs0eaBA0W9iKp4';
+        const RANGE = 'Sheet1!A:P'; // Adjust based on your sheet
+        
+        // Zone Colors Mapping
+        const ZONE_COLORS = {
+            'เสนานิคม': { color: '#FFF9C4', borderColor: '#FBC02D' },
+            'จันทรเกษม': { color: '#FFCDD2', borderColor: '#E53935' },
+            'จรเข้บัว': { color: '#BBDEFB', borderColor: '#1976D2' },
+            'ลาดพร้าว': { color: '#D7CCC8', borderColor: '#6D4C41' }
+        };
+
+        // ============================================
+        // Global Variables
+        // ============================================
+        
+        let map;
+        let markerClusterGroup;
+        let allProjects = [];
+        let filteredProjects = [];
+        let markers = {};
+
+        // ============================================
+        // Initialize Map
+        // ============================================
+        
+        function initMap() {
+            map = L.map('map').setView([13.7563, 100.5018], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            markerClusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 80,
+                disableClusteringAtZoom: 17
+            });
+            
+            map.addLayer(markerClusterGroup);
+        }
+
+        // ============================================
+        // Load Data from Google Sheet
+        // ============================================
+        
+        async function loadSheetData() {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/query?tqx=out:json`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.table && data.table.rows.length > 0) {
+                    parseSheetData(data.table);
+                    populateFilters();
+                    displayAllProjects();
+                }
+            } catch (error) {
+                console.error('Error loading sheet:', error);
+                document.getElementById('projectsList').innerHTML = '<div class="loading">⚠️ ไม่สามารถโหลดข้อมูลได้</div>';
+            }
+        }
+
+        // ============================================
+        // Parse Sheet Data
+        // ============================================
+        
+        function parseSheetData(table) {
+            const headers = table.cols.map(col => col.label);
+            
+            // Find column indices
+            const projectIdx = headers.indexOf('Project');
+            const zoneIdx = headers.indexOf('Zone');
+            const typeIdx = headers.indexOf('Type');
+            const minPriceIdx = headers.indexOf('Min Price');
+            const maxPriceIdx = headers.indexOf('Max Price');
+            const unitsIdx = headers.indexOf('Units');
+            const yearBuiltIdx = headers.indexOf('Year Built');
+            const soiIdx = headers.indexOf('Soi');
+            const roadAccessIdx = headers.indexOf('Road Access');
+            const mrtBtsIdx = headers.indexOf('MRT / BTS');
+            const developerIdx = headers.indexOf('Developer');
+            const googleMapIdx = headers.indexOf('Google Man');
+            const latIdx = headers.indexOf('Latitude');
+            const lonIdx = headers.indexOf('Longitude');
+
+            allProjects = [];
+            
+            table.rows.forEach(row => {
+                if (row.c[latIdx] && row.c[lonIdx]) {
+                    const project = {
+                        name: row.c[projectIdx]?.v || 'Unknown',
+                        zone: row.c[zoneIdx]?.v || 'Unknown',
+                        type: row.c[typeIdx]?.v || 'Unknown',
+                        minPrice: row.c[minPriceIdx]?.v || 0,
+                        maxPrice: row.c[maxPriceIdx]?.v || 0,
+                        units: row.c[unitsIdx]?.v || '-',
+                        yearBuilt: row.c[yearBuiltIdx]?.v || '-',
+                        soi: row.c[soiIdx]?.v || '-',
+                        roadAccess: row.c[roadAccessIdx]?.v || '-',
+                        mrtBts: row.c[mrtBtsIdx]?.v || '-',
+                        developer: row.c[developerIdx]?.v || '-',
+                        googleMapLink: row.c[googleMapIdx]?.v || '#',
+                        lat: parseFloat(row.c[latIdx].v),
+                        lon: parseFloat(row.c[lonIdx].v)
+                    };
+                    
+                    allProjects.push(project);
+                }
+            });
+
+            console.log(`Loaded ${allProjects.length} projects`);
+        }
+
+        // ============================================
+        // Populate Filters
+        // ============================================
+        
+        function populateFilters() {
+            // Zone Filters
+            const zones = [...new Set(allProjects.map(p => p.zone))];
+            const zoneHtml = zones.map(zone => `
+                <div class="filter-option">
+                    <input type="checkbox" id="zone_${zone}" value="${zone}" class="zone-check">
+                    <label for="zone_${zone}">
+                        <div class="zone-color" style="background-color: ${ZONE_COLORS[zone]?.color || '#E0E0E0'}"></div>
+                        ${zone}
+                    </label>
+                </div>
+            `).join('');
+            document.getElementById('zoneFilters').innerHTML = zoneHtml;
+
+            // Type Filters
+            const types = [...new Set(allProjects.map(p => p.type))];
+            const typeHtml = types.map(type => `
+                <div class="filter-option">
+                    <input type="checkbox" id="type_${type}" value="${type}" class="type-check">
+                    <label for="type_${type}">${type}</label>
+                </div>
+            `).join('');
+            document.getElementById('typeFilters').innerHTML = typeHtml;
+        }
+
+        // ============================================
+        // Apply Filters
+        // ============================================
+        
+        function applyFilters() {
+            const selectedZones = Array.from(document.querySelectorAll('.zone-check:checked')).map(el => el.value);
+            const selectedTypes = Array.from(document.querySelectorAll('.type-check:checked')).map(el => el.value);
+            const minPrice = parseFloat(document.getElementById('minPrice').value) || 0;
+            const maxPrice = parseFloat(document.getElementById('maxPrice').value) || Infinity;
+            const searchText = document.getElementById('searchBox').value.toLowerCase();
+
+            filteredProjects = allProjects.filter(project => {
+                const matchZone = selectedZones.length === 0 || selectedZones.includes(project.zone);
+                const matchType = selectedTypes.length === 0 || selectedTypes.includes(project.type);
+                const matchPrice = project.minPrice >= minPrice && project.minPrice <= maxPrice;
+                const matchSearch = searchText === '' || project.name.toLowerCase().includes(searchText);
+
+                return matchZone && matchType && matchPrice && matchSearch;
+            });
+
+            updateMap();
+            displayFilteredProjects();
+        }
+
+        // ============================================
+        // Reset Filters
+        // ============================================
+        
+        function resetFilters() {
+            document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+            document.getElementById('minPrice').value = '';
+            document.getElementById('maxPrice').value = '';
+            document.getElementById('searchBox').value = '';
+            
+            filteredProjects = allProjects;
+            updateMap();
+            displayAllProjects();
+        }
+
+        // ============================================
+        // Update Map
+        // ============================================
+        
+        function updateMap() {
+            markerClusterGroup.clearLayers();
+            markers = {};
+
+            filteredProjects.forEach((project, index) => {
+                const zoneColor = ZONE_COLORS[project.zone] || { color: '#E0E0E0', borderColor: '#999' };
+                
+                const markerHtml = `
+                    <div style="
+                        background-color: ${zoneColor.color};
+                        border: 2px solid ${zoneColor.borderColor};
+                        border-radius: 50%;
+                        width: 32px;
+                        height: 32px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 16px;
+                        cursor: pointer;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                    ">🏠</div>
+                `;
+
+                const icon = L.divIcon({
+                    html: markerHtml,
+                    iconSize: [32, 32],
+                    popupAnchor: [0, -16],
+                    className: 'custom-marker'
+                });
+
+                const marker = L.marker([project.lat, project.lon], { icon })
+                    .bindPopup(createPopupContent(project), { maxWidth: 300 });
+
+                markerClusterGroup.addLayer(marker);
+                markers[index] = marker;
+            });
+        }
+
+        // ============================================
+        // Create Popup Content
+        // ============================================
+        
+        function createPopupContent(project) {
+            return `
+                <div class="popup-content">
+                    <div class="popup-header">${project.name}</div>
+                    <div class="popup-info">
+                        <strong>โซน:</strong> ${project.zone}
+                    </div>
+                    <div class="popup-info">
+                        <strong>ประเภท:</strong> ${project.type}
+                    </div>
+                    <div class="popup-info">
+                        <strong>ราคา:</strong> ${project.minPrice} - ${project.maxPrice} ล้าน
+                    </div>
+                    <div class="popup-info">
+                        <strong>หน่วย:</strong> ${project.units}
+                    </div>
+                    <div class="popup-info">
+                        <strong>ถนน:</strong> ${project.roadAccess}
+                    </div>
+                    <div class="popup-info">
+                        <strong>BTS/MRT:</strong> ${project.mrtBts}
+                    </div>
+                    <div class="popup-info">
+                        <strong>ซอย:</strong> ${project.soi}
+                    </div>
+                    <div class="popup-info">
+                        <strong>ผู้พัฒนา:</strong> ${project.developer}
+                    </div>
+                    <div class="popup-links">
+                        <a href="${project.googleMapLink}" target="_blank">📍 Google Map</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============================================
+        // Display Projects List
+        // ============================================
+        
+        function displayAllProjects() {
+            filteredProjects = allProjects;
+            displayFilteredProjects();
+        }
+
+        function displayFilteredProjects() {
+            const html = filteredProjects.length > 0
+                ? filteredProjects.map((p, i) => `
+                    <div class="project-item" onclick="focusOnProject(${allProjects.indexOf(p)})">
+                        <div class="project-item-name">${p.name}</div>
+                        <div class="project-item-zone">${p.zone} • ${p.type}</div>
+                        <div class="project-item-zone">${p.minPrice} - ${p.maxPrice} ล้าน</div>
+                    </div>
+                `).join('')
+                : '<div class="loading">ไม่พบโครงการที่ตรงกับเงื่อนไข</div>';
+
+            document.getElementById('projectsList').innerHTML = html;
+        }
+
+        // ============================================
+        // Focus on Project
+        // ============================================
+        
+        function focusOnProject(index) {
+            const project = allProjects[index];
+            map.setView([project.lat, project.lon], 16);
+            
+            if (markers[index]) {
+                markers[index].openPopup();
+            }
+        }
+
+        // ============================================
+        // Search Event
+        // ============================================
+        
+        document.getElementById('searchBox').addEventListener('input', applyFilters);
+
+        // ============================================
+        // Initialize on Load
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+            loadSheetData();
+        });
+    </script>
+</body>
+</html>
