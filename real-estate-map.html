@@ -290,8 +290,9 @@
 
         async function loadCSVData() {
             try {
-                const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQkOdRULyIfGZRazPhqFn4vQvsCBuxOC1SAEwwiiecwQ_GbFx8_aTCeWa8EqZLPphRGHOnClatbqeKt/pub?output=csv&t=' + Date.now());
-                const csvText = await response.text();
+                const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQkOdRULyIfGZRazPhqFn4vQvsCBuxOC1SAEwwiiecwQ_GbFx8_aTCeWa8EqZLPphRGHOnClatbqeKt/pub?output=csv&t=' + Date.now();
+const proxyUrl = 'https://cors-anywhere.herokuapp.com/' + csvUrl;
+const response = await fetch(proxyUrl);
                 parseCSV(csvText);
                 populateFilters();
                 displayAllProjects();
@@ -486,4 +487,5 @@ const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
     </script>
 </body>
 </html>
+
 
